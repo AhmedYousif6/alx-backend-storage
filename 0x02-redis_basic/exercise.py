@@ -20,19 +20,31 @@ def count_calls(method: Callable) -> Callable:
 
     return wrapper
 
-    def call_history(method: Callable) -> Callable:
-        """ store the history of inputs and outputs
-        for call method"""
-        @wraps(method)
-        def wrapper(self, *args, **kwargs):
-            """wrapper for the decorated method"""
-            input = str(args)
-            self._redis.rpush(method.__qualname__ + ":inputs", input)
-            output = str(method(self, *args, **kwargs))
-            self._redis.rpush(method.__qualname__ + ":outputs", output)
-            return output
+def call_history(method: Callable) -> Callable:
+    """ store the history of inputs and outputs
+    for call method"""
+    @wraps(method)
+    def wrapper(self, *args, **kwargs):
+        """wrapper for the decorated method"""
+        input = str(args)
+        self._redis.rpush(method.__qualname__ + ":inputs", input)
+        output = str(method(self, *args, **kwargs))
+        self._redis.rpush(method.__qualname__ + ":outputs", output)
+        return output
 
-        return wrapper
+    return wrapper
+
+def replay(fn: Callable):
+    r = redis.Redis()
+    function_name = fn.__qualname__
+    value = int(r.get(function_name))
+    print("{} was called {} times:".format(function_name, value))
+    inputs = r.lrange("{}:inputs".format(function_name, 0, -1))
+    outputs = r.lrange("{}:outputs".format(function_name, 0, -1))
+    for input, output in zip(inputs, outputs):
+        input = input.decode("utf-8")
+        output = output.decode("utf-8")
+        print("{}(*{}) -> {}".format(function_name, input, output))
 
 
 class Cache:
