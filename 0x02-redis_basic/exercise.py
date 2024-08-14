@@ -40,13 +40,24 @@ def replay(fn: Callable):
     """ return the count of history and inputs and outputs"""
     r = redis.Redis()
     function_name = fn.__qualname__
-    value = int(r.get(function_name))
+    value = r.get(function_name)
+    try:
+        value = int(value.decode("utf-8"))
+    except Exception:
+        value = 0
     print("{} was called {} times:".format(function_name, value))
     inputs = r.lrange("{}:inputs".format(function_name, 0, -1))
     outputs = r.lrange("{}:outputs".format(function_name, 0, -1))
     for input, output in zip(inputs, outputs):
-        input = input.decode("utf-8")
-        output = output.decode("utf-8")
+        try:
+            input = input.decode("utf-8")
+        except Exception:
+            input = ""
+
+        try:
+            output = output.decode("utf-8")
+        except Exception:
+            output = ""
         print("{}(*{}) -> {}".format(function_name, input, output))
 
 
