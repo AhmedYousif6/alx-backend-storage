@@ -1,25 +1,27 @@
 #!/usr/bin/env python3
-"""implementing an expiring web cache and tracker"""
+"""advanced task"""
 
 import redis
-from functools import wraps
 import requests
-
+from functools import wraps
 
 r = redis.Redis()
 
 
 def url_access_count(method):
-    """ decorator for get_page function"""
+    """decorator for get_page function"""
     @wraps(method)
     def wrapper(url):
-        """ wrapper function"""
-        key = "cache:" + url
+        """wrapper function"""
+        key = "cached:" + url
         cached_value = r.get(key)
         if cached_value:
             return cached_value.decode("utf-8")
+
+            # Get new content and update cache
         key_count = "count:" + url
         html_content = method(url)
+
         r.incr(key_count)
         r.set(key, html_content, ex=10)
         r.expire(key, 10)
@@ -29,10 +31,10 @@ def url_access_count(method):
 
 @url_access_count
 def get_page(url: str) -> str:
-    """ optain the html content of a particular url"""
-    result = requests.get(url)
-    return result.text
+    """obtain the HTML content of a particular"""
+    results = requests.get(url)
+    return results.text
 
 
 if __name__ == "__main__":
-    get_page("http://slowwly.robertomurray.co.uk")
+    get_page('http://slowwly.robertomurray.co.uk')
