@@ -1,4 +1,4 @@
-#!/usr/bin/env/python3
+#!/usr/bin/env python3
 
 """ task 0"""
 
@@ -15,7 +15,7 @@ class Cache:
         self._redis = redis.Redis()
         self._redis.flushdb()
 
-    def store(data: Union[str, bytes, int, float]) -> str:
+    def store(self, data: Union[str, bytes, int, float]) -> str:
         """ store the input data with random key"""
         key = str(uuid.uuid4())
         self._redis.set(key, data)
