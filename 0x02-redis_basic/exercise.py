@@ -20,6 +20,7 @@ def count_calls(method: Callable) -> Callable:
 
     return wrapper
 
+
 def call_history(method: Callable) -> Callable:
     """ store the history of inputs and outputs
     for call method"""
@@ -34,7 +35,9 @@ def call_history(method: Callable) -> Callable:
 
     return wrapper
 
+
 def replay(fn: Callable):
+    """ return the count of history and inputs and outputs"""
     r = redis.Redis()
     function_name = fn.__qualname__
     value = int(r.get(function_name))
