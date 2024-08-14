@@ -1,40 +1,55 @@
 #!/usr/bin/env python3
-"""advanced task"""
 
-import redis
+""" advanced task """
+
 import requests
-from functools import wraps
+import redis
+import time
+from typing import Callable
+import functools
 
-r = redis.Redis()
+
+redis_client = redis.Redis()
 
 
-def url_access_count(method):
-    """decorator for get_page function"""
-    @wraps(method)
-    def wrapper(url):
-        """wrapper function"""
-        key = "cached:" + url
-        cached_value = r.get(key)
-        if cached_value:
-            return cached_value.decode("utf-8")
+def cache_with_expiration(expiration: int):
+    """Decorator to cache the result of a function with an expiration time."""
+    def decorator(func: Callable):
+        """ decorator to cache"""
+        @functools.wraps(func)
+        def wrapper(url: str):
+            """wrapper function"""
+            cache_key = f"cache:{url}"
 
-            # Get new content and update cache
-        key_count = "count:" + url
-        html_content = method(url)
+            cached_result = redis_client.get(cache_key)
+            if cached_result:
+                return cached_result.decode('utf-8')
 
-        r.incr(key_count)
-        r.set(key, html_content, ex=10)
-        r.expire(key, 10)
-        return html_content
+            result = func(url)
+            redis_client.setex(cache_key, expiration, result)
+            return result
+
+        return wrapper
+    return decorator
+
+
+def count_accesses(func: Callable):
+    """Decorator to count the number of times a URL is accessed."""
+    @functools.wraps(func)
+    def wrapper(url: str):
+        count_key = f"count:{url}"
+
+        redis_client.incr(count_key)
+
+        return func(url)
+
     return wrapper
 
 
-@url_access_count
+@cache_with_expiration(expiration=10)
+@count_accesses
 def get_page(url: str) -> str:
-    """obtain the HTML content of a particular"""
-    results = requests.get(url)
-    return results.text
-
-
-if __name__ == "__main__":
-    get_page('http://slowwly.robertomurray.co.uk')
+    """Fetch the HTML content of the URL and return it."""
+    response = requests.get(url)
+    response.raise_for_status()
+    return response.text
